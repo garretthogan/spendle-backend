@@ -25,7 +25,7 @@ app.use(bodyParser.json());
 app.get('/public_key', function(request, response, next) {
   response.setHeader('Access-Control-Allow-Origin', '*');
   response.setHeader('Content-Type', 'application/json');
-  response.send(JSON.stringify({public_key: serverEnv.PUBLIC_KEY}));
+  response.send(JSON.stringify({public_key: process.env.PUBLIC_KEY || serverEnv.PUBLIC_KEY}));
 });
 
 app.options('/get_access_token', cors());
