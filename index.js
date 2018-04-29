@@ -1,4 +1,4 @@
-const serverEnv = process.env.NODE_ENV === 'development' ? require('./.env.json') : null;
+const serverEnv = process.env.IS_LOCAL === 'true' ? require('./.env.json') : null;
 const plaid = require('plaid');
 const moment = require('moment');
 const cors = require('cors');
