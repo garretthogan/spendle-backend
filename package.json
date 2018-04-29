@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "NODE_ENV=sandbox PORT=8000 node index.js"
+    "dev": "NODE_ENV=development PORT=8000 node index.js"
   },
   "author": "",
   "license": "ISC",
