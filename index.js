@@ -5,11 +5,11 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const express = require('express');
 const app = express();
-const plaidEnv = plaid.environments[process.env.NODE_ENV || 'development'];
+const plaidEnv = plaid.environments[process.env.NODE_ENV] || 'development';
 const plaidClient = new plaid.Client(
-  serverEnv.CLIENT_ID,
-  serverEnv.SECRET,
-  serverEnv.PUBLIC_KEY,
+  process.env.CLIENT_ID || serverEnv.CLIENT_ID,
+  process.env.SECRET || serverEnv.SECRET,
+  process.env.PUBLIC_KEY || serverEnv.PUBLIC_KEY,
   plaidEnv,
 );
 
