@@ -102,8 +102,8 @@ app.options('/transactions', cors());
 app.post('/transactions', function(request, response, next) {
   response.setHeader('Access-Control-Allow-Origin', '*');
   // Pull transactions for the Item for the last 30 days
-  var startDate = moment().startOf('month').format('YYYY-MM-DD');
-  var endDate = moment().format('YYYY-MM-DD');
+  var startDate = moment(request.body.start_date).format('YYYY-MM-DD');
+  var endDate = moment(request.body.end_date).format('YYYY-MM-DD');
   plaidClient.getTransactions(request.body.access_token, startDate, endDate, {
     count: 250,
     offset: 0,
@@ -123,6 +123,12 @@ app.post('/create_budget', function(request, response, next) {
   response.setHeader('Access-Control-Allow-Origin', '*');
   response.status(200);
   response.send(JSON.stringify({message: 'Budget created!'}));
+});
+
+app.post('/create_report', function(request, response, next) {
+  response.setHeader('Access-Control-Allow-Origin', '*');
+  response.status(200);
+  response.send(JSON.stringify({message: 'Report created!'}));
 });
 
 app.listen(process.env.PORT || 8000, () => {
