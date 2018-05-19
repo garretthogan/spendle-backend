@@ -5,6 +5,15 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const express = require('express');
 const app = express();
+const AWS = require('aws-sdk');
+AWS.config.update({
+  region: 'us-east-1',
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID || serverEnv.AWS_ACCESS_KEY_ID,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || serverEnv.AWS_SECRET_ACCESS_KEY,
+});
+const dyanmoDb = new AWS.DynamoDB({apiVersion: '2012-08-10'});
+const tableName = 'spendle-user-data';
+
 const envs = {
   'development': plaid.environments.sandbox,
   'production': plaid.environments.development,
@@ -21,6 +30,42 @@ app.use(bodyParser.urlencoded({
   extended: false,
 }));
 app.use(bodyParser.json());
+
+app.options('/save_budget', cors());
+app.post('/save_budget', function(request, response, next) {
+  response.setHeader('Access-Control-Allow-Origin', '*');
+  const incomeAfterBills = request.body.incomeAfterBills;
+  const phoneNumber = request.body.phoneNumber;
+  const targetSavingsPercentage = request.body.targetSavingsPercentage;
+  const spentThisMonth = request.body.spentThisMonth;
+  const userId = request.body.userId;
+
+  const params = {
+    TableName: tableName,
+    Item: {
+      'userId': {
+        S: userId
+      },
+      'targetSavingsPercentage': {
+        N: `${targetSavingsPercentage}`
+      },
+      'incomeAfterBills': {
+        N: `${incomeAfterBills}`
+      },
+      'phoneNumber': {
+        N: `${phoneNumber}`
+      },
+      'spentThisMonth': {
+        N: `${spentThisMonth}`
+      }
+    }    
+  };
+
+  dyanmoDb.putItem(params, (error, data) => {
+    console.log({error, data});
+    response.send(JSON.stringify({message: 'Budget saved!'}));
+  });
+});
 
 app.get('/public_key', function(request, response, next) {
   response.setHeader('Access-Control-Allow-Origin', '*');
