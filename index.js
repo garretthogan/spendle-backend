@@ -163,19 +163,6 @@ app.post('/transactions', function(request, response, next) {
   });
 });
 
-app.options('/create_budget', cors());
-app.post('/create_budget', function(request, response, next) {
-  response.setHeader('Access-Control-Allow-Origin', '*');
-  response.status(200);
-  response.send(JSON.stringify({message: 'Budget created!'}));
-});
-
-app.post('/create_report', function(request, response, next) {
-  response.setHeader('Access-Control-Allow-Origin', '*');
-  response.status(200);
-  response.send(JSON.stringify({message: 'Report created!'}));
-});
-
 app.listen(process.env.PORT || 8000, () => {
   console.log('LISTENING ON ', process.env.PORT || 8000);
 });
