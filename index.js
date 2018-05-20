@@ -16,7 +16,7 @@ const tableName = 'spendle-user-data';
 
 const envs = {
   'development': plaid.environments.sandbox,
-  'production': plaid.environments.sandbox,
+  'production': plaid.environments.development,
 };
 const plaidEnv = envs[process.env.NODE_ENV];
 const plaidClient = new plaid.Client(
