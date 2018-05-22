@@ -80,6 +80,7 @@ app.get('/user/:userId', function(request, response, next) {
   }).catch(error => response.send(JSON.stringify(error)));
 });
 
+// validate fb token here too
 app.options('/save_budget', cors());
 app.post('/save_budget', function(request, response, next) {
   response.setHeader('Access-Control-Allow-Origin', '*');
