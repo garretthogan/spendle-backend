@@ -89,7 +89,6 @@ app.post('/save_budget', function(request, response, next) {
   const spentThisMonth = request.body.spentThisMonth;
   const userId = request.body.userId;
   const spendleAccessToken = request.body.accessToken;
-
   const params = {
     TableName: tableName,
     Item: {
