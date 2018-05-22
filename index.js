@@ -1,4 +1,6 @@
-const serverEnv = process.env.IS_LOCAL === 'true' ? require('./.env.json') : null;
+const serverEnv = process.env.IS_LOCAL === 'true' ? require('./.env.json') : process.env;
+const fb_graph_url = 'https://graph.facebook.com';
+const fetch = require('node-fetch');
 const plaid = require('plaid');
 const moment = require('moment');
 const cors = require('cors');
@@ -16,13 +18,13 @@ const tableName = 'spendle-user-data';
 
 const envs = {
   'development': plaid.environments.sandbox,
-  'production': plaid.environments.sandbox,
+  'production': plaid.environments.development,
 };
 const plaidEnv = envs[process.env.NODE_ENV];
 const plaidClient = new plaid.Client(
-  process.env.CLIENT_ID || serverEnv.CLIENT_ID,
-  process.env.SECRET || serverEnv.SECRET,
-  process.env.PUBLIC_KEY || serverEnv.PUBLIC_KEY,
+  serverEnv.CLIENT_ID,
+  serverEnv.SECRET,
+  serverEnv.PUBLIC_KEY,
   plaidEnv,
 );
 
@@ -30,6 +32,53 @@ app.use(bodyParser.urlencoded({
   extended: false,
 }));
 app.use(bodyParser.json());
+
+function validateToken (token) {
+  return fetch(`${fb_graph_url}/debug_token?input_token=${token}&access_token=${serverEnv.FB_APP_TOKEN}`)
+    .then(res => res.json())
+    .then((verifyResponse) => {
+      return verifyResponse.data.is_valid;
+    })
+    .catch(error => error);
+}
+
+app.options('/user/:userId', cors());
+app.get('/user/:userId', function(request, response, next) {
+  response.setHeader('Access-Control-Allow-Origin', '*');
+  const userId = request.params.userId;
+  const testToken = request.query.token;
+  const params = {
+    TableName: tableName,
+    Key: {
+      'userId': {
+        S: request.params.userId
+      }
+    }
+  }
+
+  validateToken(testToken).then((isValid) => {
+    if(isValid) {
+      dyanmoDb.getItem(params).promise().then((data) => {
+        if (Object.keys(data).length < 1) {
+          response.send(JSON.stringify({userExists: false}));
+        } else {
+          const user = {
+            userExists: true,
+            incomeAfterBills: data.Item.incomeAfterBills.N,
+            phoneNumber: data.Item.phoneNumber.N,
+            targetSavingsPercentage: data.Item.targetSavingsPercentage.N,
+            spendleAccessToken: data.Item.spendleAccessToken.S,
+            spentThisMonth: data.Item.spentThisMonth.N,
+            userId: data.Item.userId.S
+          }
+          response.send(JSON.stringify(user));
+        }
+      }).catch(error => response.send(JSON.stringify(error)));
+    } else {
+      response.send(JSON.stringify({message: 'INVALID TOKEN'}))
+    }
+  }).catch(error => response.send(JSON.stringify(error)));
+});
 
 app.options('/save_budget', cors());
 app.post('/save_budget', function(request, response, next) {
@@ -39,6 +88,7 @@ app.post('/save_budget', function(request, response, next) {
   const targetSavingsPercentage = request.body.targetSavingsPercentage;
   const spentThisMonth = request.body.spentThisMonth;
   const userId = request.body.userId;
+  const spendleAccessToken = request.body.accessToken;
 
   const params = {
     TableName: tableName,
@@ -57,12 +107,14 @@ app.post('/save_budget', function(request, response, next) {
       },
       'spentThisMonth': {
         N: `${spentThisMonth}`
+      },
+      'spendleAccessToken': {
+        S: `${spendleAccessToken}`
       }
-    }    
+    }
   };
 
   dyanmoDb.putItem(params, (error, data) => {
-    console.log({error, data});
     response.send(JSON.stringify({message: 'Budget saved!'}));
   });
 });
@@ -160,6 +212,18 @@ app.post('/transactions', function(request, response, next) {
       }));
     }
     response.send(JSON.stringify(transactionsResponse.transactions));
+  });
+});
+
+app.options('/remove_item', cors());
+app.post('/remove_item', function(request, response, next) {
+  response.setHeader('Access-Control-Allow-Origin', '*');
+  plaidClient.removeItem(request.body.access_token, function(error, itemResponse) {
+    if(error != null) {
+      console.log(JSON.stringify(error));
+      return response.send(JSON.stringify(error));
+    }
+    response.send(JSON.stringify(itemResponse));
   });
 });
 
