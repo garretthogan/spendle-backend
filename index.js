@@ -75,7 +75,7 @@ app.get('/user/:userId', function(request, response, next) {
         }
       }).catch(error => response.send(JSON.stringify(error)));
     } else {
-      response.send(JSON.stringify({message: 'INVALID TOKEN'}))
+      response.send(JSON.stringify({message: 'INVALID TOKEN'}));
     }
   }).catch(error => response.send(JSON.stringify(error)));
 });
@@ -84,45 +84,58 @@ app.get('/user/:userId', function(request, response, next) {
 app.options('/save_budget', cors());
 app.post('/save_budget', function(request, response, next) {
   response.setHeader('Access-Control-Allow-Origin', '*');
-  const incomeAfterBills = request.body.incomeAfterBills;
-  const phoneNumber = request.body.phoneNumber;
-  const targetSavingsPercentage = request.body.targetSavingsPercentage;
-  const spentThisMonth = request.body.spentThisMonth;
-  const userId = request.body.userId;
-  const spendleAccessToken = request.body.accessToken;
-  const params = {
-    TableName: tableName,
-    Item: {
-      'userId': {
-        S: userId
-      },
-      'targetSavingsPercentage': {
-        N: `${targetSavingsPercentage}`
-      },
-      'incomeAfterBills': {
-        N: `${incomeAfterBills}`
-      },
-      'phoneNumber': {
-        N: `${phoneNumber}`
-      },
-      'spentThisMonth': {
-        N: `${spentThisMonth}`
-      },
-      'spendleAccessToken': {
-        S: `${spendleAccessToken}`
-      }
+  const testToken = request.body.token;
+  validateToken(testToken).then(isValid => {
+    if(isValid) {
+      const incomeAfterBills = request.body.incomeAfterBills;
+      const phoneNumber = request.body.phoneNumber;
+      const targetSavingsPercentage = request.body.targetSavingsPercentage;
+      const spentThisMonth = request.body.spentThisMonth;
+      const userId = request.body.userId;
+      const spendleAccessToken = request.body.accessToken;
+      const params = {
+        TableName: tableName,
+        Item: {
+          'userId': {
+            S: userId
+          },
+          'targetSavingsPercentage': {
+            N: `${targetSavingsPercentage}`
+          },
+          'incomeAfterBills': {
+            N: `${incomeAfterBills}`
+          },
+          'phoneNumber': {
+            N: `${phoneNumber}`
+          },
+          'spentThisMonth': {
+            N: `${spentThisMonth}`
+          },
+          'spendleAccessToken': {
+            S: `${spendleAccessToken}`
+          }
+        }
+      };
+    
+      dyanmoDb.putItem(params, (error, data) => {
+        response.send(JSON.stringify({message: 'Budget saved!'}));
+      });
+    } else {
+      response.send(JSON.stringify({message: 'INVALID TOKEN'}));
     }
-  };
-
-  dyanmoDb.putItem(params, (error, data) => {
-    response.send(JSON.stringify({message: 'Budget saved!'}));
   });
 });
 
 app.get('/public_key', function(request, response, next) {
   response.setHeader('Access-Control-Allow-Origin', '*');
   response.setHeader('Content-Type', 'application/json');
-  response.send(JSON.stringify({public_key: process.env.PUBLIC_KEY || serverEnv.PUBLIC_KEY}));
+  validateToken(request.query.fbAccessToken).then(isValid => {
+    if (isValid) {
+      response.send(JSON.stringify({public_key: process.env.PUBLIC_KEY || serverEnv.PUBLIC_KEY}));
+    } else {
+      response.send(JSON.stringify({message: 'INVALID TOKEN'}));
+    }
+  });
 });
 
 app.options('/get_access_token', cors());
