@@ -67,7 +67,7 @@ app.get('/user/:userId', function(request, response, next) {
             incomeAfterBills: data.Item.incomeAfterBills.N,
             phoneNumber: data.Item.phoneNumber.N,
             targetSavingsPercentage: data.Item.targetSavingsPercentage.N,
-            spendleAccessToken: data.Item.spendleAccessToken.S,
+            plaidAccessToken: data.Item.plaidAccessToken.S,
             spentThisMonth: data.Item.spentThisMonth.N,
             userId: data.Item.userId.S
           }
@@ -92,7 +92,7 @@ app.post('/save_budget', function(request, response, next) {
       const targetSavingsPercentage = request.body.targetSavingsPercentage;
       const spentThisMonth = request.body.spentThisMonth;
       const userId = request.body.userId;
-      const spendleAccessToken = request.body.accessToken;
+      const plaidAccessToken = request.body.accessToken;
       const params = {
         TableName: tableName,
         Item: {
@@ -111,8 +111,8 @@ app.post('/save_budget', function(request, response, next) {
           'spentThisMonth': {
             N: `${spentThisMonth}`
           },
-          'spendleAccessToken': {
-            S: `${spendleAccessToken}`
+          'plaidAccessToken': {
+            S: `${plaidAccessToken}`
           }
         }
       };
