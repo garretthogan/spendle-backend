@@ -85,6 +85,7 @@ app.options('/save_budget', cors());
 app.post('/save_budget', function(request, response, next) {
   response.setHeader('Access-Control-Allow-Origin', '*');
   const testToken = request.body.token;
+  
   validateToken(testToken).then(isValid => {
     if(isValid) {
       const incomeAfterBills = request.body.incomeAfterBills;
@@ -93,6 +94,7 @@ app.post('/save_budget', function(request, response, next) {
       const spentThisMonth = request.body.spentThisMonth;
       const userId = request.body.userId;
       const plaidAccessToken = request.body.accessToken;
+
       const params = {
         TableName: tableName,
         Item: {
