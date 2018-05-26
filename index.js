@@ -7,18 +7,20 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const express = require('express');
 const app = express();
+
 const AWS = require('aws-sdk');
 AWS.config.update({
   region: 'us-east-1',
   accessKeyId: process.env.AWS_ACCESS_KEY_ID || serverEnv.AWS_ACCESS_KEY_ID,
   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || serverEnv.AWS_SECRET_ACCESS_KEY,
 });
+
 const dyanmoDb = new AWS.DynamoDB({apiVersion: '2012-08-10'});
 const tableName = 'spendle-user-data';
 
 const envs = {
-  'development': plaid.environments.sandbox,
-  'production': plaid.environments.sandbox,
+  'development': plaid.environments.development,
+  'production': plaid.environments.development,
 };
 const plaidEnv = envs[process.env.NODE_ENV];
 const plaidClient = new plaid.Client(
@@ -85,7 +87,7 @@ app.options('/save_budget', cors());
 app.post('/save_budget', function(request, response, next) {
   response.setHeader('Access-Control-Allow-Origin', '*');
   const testToken = request.body.token;
-  
+
   validateToken(testToken).then(isValid => {
     if(isValid) {
       const incomeAfterBills = request.body.incomeAfterBills;
