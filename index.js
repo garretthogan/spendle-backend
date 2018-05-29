@@ -56,7 +56,7 @@ app.get('/user/:userId', function(request, response, next) {
         S: request.params.userId
       }
     }
-  }
+  };
 
   validateToken(testToken).then((isValid) => {
     if(isValid) {
@@ -232,6 +232,100 @@ app.post('/transactions', function(request, response, next) {
   });
 });
 
+app.options('/progress_report', cors());
+app.post('/progress_report', function(request, response, next) {
+  response.setHeader('Access-Control-Allow-Origin', '*');
+  const startDate = moment(request.body.start_date).format('YYYY-MM-DD');
+  const endDate = moment(request.body.end_date).format('YYYY-MM-DD');
+  const filters = request.body.filters;
+  const userId = request.body.user_id;
+  const accessToken = request.body.access_token;
+  const fbAccessToken = request.body.user_access_token;
+
+  validateToken(fbAccessToken).then((isValid) => {
+    if (!isValid) {
+      response.send(JSON.stringify({message: 'INVALID ACCESS TOKEN'}));
+    } else {
+      plaidClient.getTransactions(accessToken, startDate, endDate, {
+        count: 250,
+        offset: 0,
+      }, function(error, transactionResponse) {
+        if(error != null) {
+          console.log(JSON.stringify(error));
+          response.send(JSON.stringify(error));
+        } else {
+          const params = {
+            TableName: tableName,
+            Key: {
+              'userId': {
+                S: userId
+              }
+            }
+          };          
+          dyanmoDb.getItem(params).promise().then((data) => {
+            if (Object.keys(data).length < 1) {
+              response.send(JSON.stringify({userExists: false}));
+            } else {
+              const transactions = transactionResponse.transactions;
+              const filtered = transactions.filter((t) => {
+                const filteredCategories = t.category.filter(c => filters.some(f => f === c));
+                return filteredCategories.length === 0;
+              });
+
+              const topTransactions = filtered
+                .sort((a, b) => (a.amount < b.amount ? 1 : -1))
+                .slice(0, 3)
+                .map(t => `$${t.amount} at ${t.name}`);
+
+              // transactions that occured last week
+              const filteredLastWeek = filtered.filter((t) => {
+                const lastWeekStart = moment().subtract(1, 'week').startOf('week');
+                const lastWeekEnd = moment().subtract(1, 'week').endOf('week');
+                const transDate = moment(t.date);
+
+                return  (transDate.isSame(lastWeekStart) || transDate.isAfter(lastWeekStart)) &&
+                        (transDate.isSame(lastWeekEnd) || transDate.isBefore(lastWeekEnd));
+              });
+
+              // transactions that occured yesterday
+              const filteredYesterday = filtered.filter((t) => {
+                const yesterday = moment().subtract(1, 'day').format('YYYY-MM-DD');
+                const transDate = moment(t.date).format('YYYY-MM-DD');
+
+                return moment(transDate).isSame(yesterday);
+              });
+
+              const totalSpent = filtered.length > 0 ? filtered.map(t => t.amount).reduce((prev, current) => prev + current) : 0;
+              const spentLastWeek = filteredLastWeek.length > 0 ? filteredLastWeek.map(t => t.amount).reduce((prev, current) => prev + current) : 0;
+              const spentYesterday = filteredYesterday.length > 0 ? filteredYesterday.map(t => t.amount).reduce((prev, current) => prev + current) : 0;
+              const incomeAfterBills = data.Item.incomeAfterBills.N;
+              const targetSavingsPercentage = data.Item.targetSavingsPercentage.N;
+              const targetSavings = incomeAfterBills * (targetSavingsPercentage * 0.01);
+              const remainingBudget = targetSavings - totalSpent;
+              const daysRemaining = moment().daysInMonth() - moment().date();
+              const dailyBudget = remainingBudget / daysRemaining;
+
+              const report = {
+                topTransactions: topTransactions,
+                totalSpent: totalSpent,
+                spentLastWeek: spentLastWeek,
+                spentYesterday: spentYesterday,
+                dailyBudget: dailyBudget,
+                remainingBudget: remainingBudget,
+                targetSavings: targetSavings,
+              };
+              response.send(JSON.stringify(report));
+            }
+          }).catch((error) => {
+            console.log({error});
+            response.send(JSON.stringify(error));
+          });
+        }
+      });
+    }
+  });
+});
+
 app.options('/remove_item', cors());
 app.post('/remove_item', function(request, response, next) {
   response.setHeader('Access-Control-Allow-Origin', '*');
@@ -247,3 +341,9 @@ app.post('/remove_item', function(request, response, next) {
 app.listen(process.env.PORT || 8000, () => {
   console.log('LISTENING ON ', process.env.PORT || 8000);
 });
+
+/**
+ * To do
+ * - refactor some logic that gets repeated
+ * - maybe create some util methods
+ */
