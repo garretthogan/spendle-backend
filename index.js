@@ -240,7 +240,6 @@ app.post('/progress_report', function(request, response, next) {
   const filters = request.body.filters;
   const userId = request.body.user_id;
   const accessToken = request.body.access_token;
-  const fbAccessToken = request.body.user_access_token;
 
   plaidClient.getTransactions(accessToken, startDate, endDate, {
     count: 250,
