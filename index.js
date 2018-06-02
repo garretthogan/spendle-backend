@@ -16,10 +16,10 @@ AWS.config.update({
 });
 
 const dyanmoDb = new AWS.DynamoDB({apiVersion: '2012-08-10'});
-const tableName = 'spendle-user-data';
+const tableName = process.env.NODE_ENV === 'production' ? 'spendle-user-data' : 'spendle-user-data-test';
 
 const envs = {
-  'development': plaid.environments.development,
+  'development': plaid.environments.sandbox,
   'production': plaid.environments.development,
 };
 const plaidEnv = envs[process.env.NODE_ENV];
@@ -70,7 +70,6 @@ app.get('/user/:userId', function(request, response, next) {
             phoneNumber: data.Item.phoneNumber.N,
             targetSavingsPercentage: data.Item.targetSavingsPercentage.N,
             plaidAccessToken: data.Item.plaidAccessToken.S,
-            spentThisMonth: data.Item.spentThisMonth.N,
             userId: data.Item.userId.S
           }
           response.send(JSON.stringify(user));
@@ -93,7 +92,6 @@ app.post('/save_budget', function(request, response, next) {
       const incomeAfterBills = request.body.incomeAfterBills;
       const phoneNumber = request.body.phoneNumber;
       const targetSavingsPercentage = request.body.targetSavingsPercentage;
-      const spentThisMonth = request.body.spentThisMonth;
       const userId = request.body.userId;
       const plaidAccessToken = request.body.accessToken;
 
@@ -112,9 +110,6 @@ app.post('/save_budget', function(request, response, next) {
           'phoneNumber': {
             N: `${phoneNumber}`
           },
-          'spentThisMonth': {
-            N: `${spentThisMonth}`
-          },
           'plaidAccessToken': {
             S: `${plaidAccessToken}`
           }
@@ -122,6 +117,10 @@ app.post('/save_budget', function(request, response, next) {
       };
     
       dyanmoDb.putItem(params, (error, data) => {
+        if(error) {
+          response.send(JSON.stringify(error));
+          return;
+        }
         response.send(JSON.stringify({message: 'Budget saved!'}));
       });
     } else {
@@ -296,13 +295,13 @@ app.post('/progress_report', function(request, response, next) {
           const incomeAfterBills = data.Item.incomeAfterBills.N;
           const targetSavingsPercentage = data.Item.targetSavingsPercentage.N;
           const targetSavings = incomeAfterBills * (targetSavingsPercentage * 0.01);
-          const remainingBudget = targetSavings - totalSpent;
+          const remainingBudget = (incomeAfterBills - targetSavings) - totalSpent;
           const daysRemaining = moment().daysInMonth() - moment().date();
           const dailyBudget = remainingBudget / daysRemaining;
 
           const report = {
             topTransactions: topTransactions,
-            totalSpent: totalSpent,
+            totalSpent: process.env.NODE_ENV === 'production' ? totalSpent : 150,
             spentLastWeek: spentLastWeek,
             spentYesterday: spentYesterday,
             dailyBudget: dailyBudget,
