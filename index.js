@@ -57,7 +57,6 @@ app.get('/user/:userId', function(request, response, next) {
       }
     }
   };
-
   validateToken(testToken).then((isValid) => {
     if(isValid) {
       dyanmoDb.getItem(params).promise().then((data) => {
@@ -77,6 +76,32 @@ app.get('/user/:userId', function(request, response, next) {
       }).catch(error => response.send(JSON.stringify(error)));
     } else {
       response.send(JSON.stringify({message: 'INVALID TOKEN'}));
+    }
+  }).catch(error => response.send(JSON.stringify(error)));
+});
+
+app.delete('/user/:userId', function(request, response, next) {
+  response.setHeader('Access-Control-Allow-Origin', '*');
+  const userId = request.params.userId;
+  const testToken = request.query.token;
+  const params = {
+    TableName: tableName,
+    Key: {
+      'userId': {
+        S: request.params.userId
+      }
+    }
+  };
+
+  validateToken(testToken).then((isValid) => {
+    if(isValid) {
+      dyanmoDb.deleteItem(params).promise().then((data) => {
+        response.send(JSON.stringify(data));
+        return;
+      }).catch(error => response.send(JSON.stringify(error)));
+    } else {
+      response.send(JSON.stringify({message: 'INVALID TOKEN'}));
+      return;
     }
   }).catch(error => response.send(JSON.stringify(error)));
 });
