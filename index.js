@@ -326,7 +326,7 @@ app.post('/progress_report', function(request, response, next) {
 
           const report = {
             topTransactions: topTransactions,
-            totalSpent: process.env.NODE_ENV === 'production' ? totalSpent : 150,
+            totalSpent: totalSpent,
             spentLastWeek: spentLastWeek,
             spentYesterday: spentYesterday,
             dailyBudget: dailyBudget,
