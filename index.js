@@ -84,6 +84,7 @@ app.delete('/user/:userId', function(request, response, next) {
   response.setHeader('Access-Control-Allow-Origin', '*');
   const userId = request.params.userId;
   const testToken = request.query.token;
+  const plaidToken = request.query.plaid_token;
   const params = {
     TableName: tableName,
     Key: {
@@ -95,9 +96,15 @@ app.delete('/user/:userId', function(request, response, next) {
 
   validateToken(testToken).then((isValid) => {
     if(isValid) {
-      dyanmoDb.deleteItem(params).promise().then((data) => {
-        response.send(JSON.stringify(data));
-        return;
+      plaidClient.deleteItem(plaidToken).then((deletedRes) => {
+        if(!deletedRes.deleted) {
+          response.send(JSON.stringify({message: 'Failed to delete plaid item.'}));
+          return;
+        }
+        dyanmoDb.deleteItem(params).promise().then((data) => {
+          response.send(JSON.stringify(data));
+          return;
+        }).catch(error => response.send(JSON.stringify(error)));
       }).catch(error => response.send(JSON.stringify(error)));
     } else {
       response.send(JSON.stringify({message: 'INVALID TOKEN'}));
